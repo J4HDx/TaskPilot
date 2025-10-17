@@ -18,10 +18,6 @@ services:
     dockerfilePath: ./backend/Dockerfile
     healthCheckPath: /api/health
     envVars:
-      - key: PORT
-        value: 8000
-      - key: PYTHON_VERSION
-        value: 3.11.9
       - key: REDIS_URL
         fromService:
           type: redis
