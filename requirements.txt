@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+celery
+redis
+httpx
+django-celery-beat
+
