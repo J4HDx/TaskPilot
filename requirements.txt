@@ -5,4 +5,4 @@ celery
 redis
 httpx
 django-celery-beat
-gunicorny
+gunicorn
