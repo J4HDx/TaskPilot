@@ -1,0 +1,82 @@
+# Render Blueprint Specification: https://render.com/docs/blueprint-spec
+services:
+  # ----------------- #
+  # --- Databases --- #
+  # ----------------- #
+  - name: taskpilot-redis
+    type: redis
+    ipAllowList: [] # Allow all services in the account to connect
+
+  # ---------------- #
+  # --- Services --- #
+  # ---------------- #
+  - name: taskpilot-backend
+    type: web
+    env: docker
+    repo: https://github.com/J4HDx/TaskPilot.git
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: taskpilot-redis
+          property: connectionString
+      - fromGroup: taskpilot-secrets
+    autoDeploy: false
+
+  - name: taskpilot-celery-worker
+    type: worker
+    env: docker
+    repo: https://github.com/J4HDx/TaskPilot.git
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    startCommand: celery -A celery_app.celery_app worker --loglevel=info
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: taskpilot-redis
+          property: connectionString
+      - fromGroup: taskpilot-secrets
+    autoDeploy: false
+
+  - name: taskpilot-celery-beat
+    type: worker
+    env: docker
+    repo: https://github.com/J4HDx/TaskPilot.git
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    startCommand: celery -A celery_app.celery_app beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: taskpilot-redis
+          property: connectionString
+      - fromGroup: taskpilot-secrets
+    autoDeploy: false
+
+  - name: taskpilot-frontend
+    type: static
+    env: docker
+    repo: https://github.com/J4HDx/TaskPilot.git
+    dockerContext: ./frontend
+    dockerfilePath: ./frontend/Dockerfile
+    staticPublishPath: /usr/share/nginx/html
+    buildFilter:
+      paths:
+        - frontend/**
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web
+          name: taskpilot-backend
+          property: url
+          path: /api
+    autoDeploy: false
